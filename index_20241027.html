@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按鈕與內容顯示器</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script> <!-- PapaParse 庫 -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh; /* 確保 body 佔滿整個視口 */
+/*            margin: 0;*/
+        }
+        #left-frame {
+            position: relative;
+            width: 50%; /* 左邊佔50% */
+            overflow-y: auto; /* 啟用自己的滾動條 */
+            border: 1px solid #ccc;
+            height: 100%; /* 保持與視口等高 */
+        }
+        #right-frame {
+            position: relative;
+            width: 50%; /* 右邊佔50% */
+            background-color: lightgray;
+/*            display: flex;
+            flex-direction: column;
+            justify-content: space-between;*/
+            padding: 20px;
+            height: 100%; /* 保持與視口等高，不受 left-frame 滾動影響 */
+            overflow-y: auto;
+        }
+        .output-content {
+            height: 30%; /* 固定高度，例如150px，可以根據需要調整 */
+            overflow-y: auto; /* 當內容超過容器高度時，顯示滾動條 */
+            padding: 10px;
+            background-color: white;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+        }
+        #topblock {
+            position: relative;
+            height: 7.5%;
+            padding: 10px;
+            /* display: flex; */
+            flex-direction: center;
+            justify-content: center;
+            /* flex: 1 1 100px; */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;     
+        }
+        #topblock2 {
+            position: relative;
+            height: 3.5%;
+            padding: 10px;
+            display: flex;
+            flex-direction: center;
+            justify-content: center; /* 讓內容與按鈕位於上下兩側 */            
+        }    
+         
+        #top {
+            position: relative;
+            top: 0;
+            height: 7.5%;
+            width: 100%;
+        }
+        #bottom {
+            position: relative;
+            top: 0;
+            height: 7.5%;
+            width: 100%;
+        }  
+        #middleblock1,#middleblock2,#middleblock3 {
+            position: relative;
+            top: 0;
+/*            height: 2.5%;*/
+            width: 100%;
+            padding: 10px;
+            background-color: skyblue;
+            display: flex;
+            justify-content: center;
+            align-items: center;               
+        }                 
+        #title1, #title2, #title3 {
+            position: relative;
+            height: 1%;
+            display: flex;
+            justify-content: center; /* 讓標題置中 */
+            font-size: 1.5em;
+        }
+        #buttons-container1, #buttons-container2, #buttons-container3, #buttons-container4, #buttons-container5, #buttons-container6 {
+            position: relative;
+            display: flex;
+            flex-wrap: wrap; /* 允許按鈕換行 */
+            gap: 10px; /* 按鈕之間的間距 */
+            height: 80%;
+            overflow-y: auto; /* 啟用滾動條 */
+            padding: 10px;
+        }
+        .content-btn {
+            flex: 1 1 100px; /* 每個按鈕最小寬度為100px，並根據螢幕寬度分配空間 */
+            padding: 10px;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .content-btn:hover {
+            background-color: #0056b3;
+        }
+        .copy-btn {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            align-self: center; /* 按鈕置中 */
+            margin-bottom: 10px;
+        }
+        .copy-btn:hover {
+            background-color: #218838;
+        }
+        label {
+            font-size: 1.5em;
+            display: flex;
+            justify-content: center;
+            align-items: center;            
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            background-color: #f1f1f1;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background-color: #ddd;
+            margin: 0 5px;
+        }
+        .tab-button.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }        
+.copy-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #28a745;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    display: none; /* 默認隱藏 */
+    opacity: 0;
+    transition: opacity 0.5s ease; /* 透明度漸變 */
+    z-index: 1000; /* 保證提示框在最上層 */
+}
+.copy-notification.show {
+    display: block;
+    opacity: 1; /* 顯示並逐漸淡入 */
+}
+
+        .modal {
+            display: none; 
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            width: 50%;
+            max-width: 500px;
+        }
+        .modal-header {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        .modal textarea {
+            width: 100%;
+            height: 150px;
+        }
+        .modal-footer {
+            text-align: right;
+        }
+        .modal-footer button {
+            padding: 10px 20px;
+            margin-left: 10px;
+        }
+        .modal-footer .save-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+        }
+        .modal-footer .cancel-btn {
+            background-color: #ccc;
+            color: black;
+            border: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="left-frame">
+        <div id="copy-notification" class="copy-notification">內容已複製到剪貼簿</div>
+
+        <div id="topblock">
+            <button id="clear-btn">清除內容</button>
+            <button id="copyall-btn">複製所有內容</button>
+        </div>
+        <div id="topblock2">
+            <label>姓名:</label><br>
+            <input type="text" id="input-content" style="width: 200px;">
+            <button id="send-btn">姓名填入內容</button>
+        </div>        
+        <!-- 頁籤 -->
+        <div class="tabs">
+ <!--            <div class="tab-button" id="tab1">合盤</div>
+            <div class="tab-button" id="tab2">診斷</div>
+            <div class="tab-button" id="tab3">教練分析</div>
+            <div class="tab-button" id="tab4">補充1</div>
+            <div class="tab-button" id="tab5">補充2</div>
+            <div class="tab-button" id="tab6">補充3</div>       -->                              
+        </div>
+
+        <!-- 頁籤內容 -->
+        <div id="tab-content1" class="tab-content">
+            <div id="buttons-container1"></div>
+        </div>
+        <div id="tab-content2" class="tab-content">
+            <div id="buttons-container2"></div>
+        </div>
+        <div id="tab-content3" class="tab-content">
+            <div id="buttons-container3"></div>
+        </div>
+        <div id="tab-content4" class="tab-content">
+            <div id="buttons-container4"></div>
+        </div>        
+        <div id="tab-content5" class="tab-content">
+            <div id="buttons-container5"></div>
+        </div>
+        <div id="tab-content6" class="tab-content">
+            <div id="buttons-container6"></div>
+        </div>        
+<!--         <div id="middleblock1"><label id="title1">合盤</label></div>
+        <div id="buttons-container"></div>
+        <div id="middleblock2"><label id="title1">診斷</label></div>
+        <div id="buttons-container2"></div>
+        <div id="middleblock3"><label id="title1">教練分析</label></div>
+        <div id="buttons-container3"></div>         -->
+    </div>
+
+    <div id="right-frame">
+        <label for="output-content1">合盤內容</label>
+        <!-- <div id="output-content1"></div> -->
+        <!-- <button class="copy-btn" id="copy-btn-1">複製合盤內容</button> -->
+
+        <!-- <div id="output-content2"></div> -->
+        <!-- <button class="copy-btn" id="copy-btn-2">複製診斷內容</button> -->
+
+        <!-- <div id="output-content3"></div> -->
+        <!-- <button class="copy-btn" id="copy-btn-3">複製教練分析內容</button> -->
+    </div>
+    <!-- Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">編輯內容</div>
+            <textarea id="modal-textarea"></textarea>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="cancel-btn">取消</button>
+                <button class="save-btn" id="save-btn">保存</button>
+            </div>
+        </div>
+    </div>
+<script>
+    var buttonContents = {};  // Object to store content for each tab
+
+    // 根據 tabs.csv 生成頁籤按鈕和內容容器
+    // 根據 tabs.csv 生成頁籤按鈕和內容容器
+    function loadTabsFromCSV(filePath) {
+        Papa.parse(filePath, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                results.data.forEach((row, index) => {
+                    let tabIndex = index + 1;
+                    let tabName = row['頁籤名稱'];
+                    let csvPath = row['CSV檔案路徑'];
+                    createTab(tabIndex, tabName, csvPath);
+
+                    // 預設 "合盤" 為第一個頁籤並自動加載其內容
+                    if (tabIndex === 1) {
+                        $(`#tab${tabIndex}`).addClass("active");
+                        handleTabClick(tabIndex, csvPath); // 加載合盤 CSV
+                    }
+                });
+            }
+        });
+    }
+
+
+    // 動態生成頁籤按鈕和內容容器
+    function createTab(index, tabName, csvPath) {
+        // $('.tabs').append(`<div class="tab-button" id="tab${index}">${tabName}</div>`);
+        $('.tabs').append(`<div class="tab-button" id="tab${index}" onclick="handleTabClick(${index}, '${csvPath}')">${tabName}</div>`);
+            
+        // $('#tab-content-container').append(`
+        //     <div id="tab-content${index}" class="tab-content">
+        //         <div id="buttons-container${index}"></div>
+        //     </div>
+        // `);
+    }
+
+    // 定義每個 loadCSVFromServer 函數並放入一個對象中
+    // const csvLoaders = {
+    //     1: loadCSVFromServer,
+    //     2: loadCSVFromServer2,
+    //     3: loadCSVFromServer3,
+    //     4: loadCSVFromServer4,
+    //     5: loadCSVFromServer5,
+    //     6: loadCSVFromServer6
+    // };
+
+    // // 切換頁籤並載入 CSV 資料
+    // function handleTabClick(tabIndex, csvPath) {
+    //     switchTab(tabIndex);
+
+    //     // 動態調用對應的 loadCSVFromServer 函數
+    //     if (csvLoaders[tabIndex]) {
+    //         csvLoaders[tabIndex](csvPath, `#buttons-container${tabIndex}`, `#output-content${tabIndex}`);
+    //     } else {
+    //         console.warn(`找不到對應的函數：loadCSVFromServer${tabIndex}`);
+    //     }
+    // }
+    // 通用的 CSV 解析函數
+    // function loadCSV(filePath, containerId, outputContainerId) {
+    //     Papa.parse(filePath, {
+    //         download: true,
+    //         complete: function(results) {
+    //             let buttonContent = {}; // 清空按鈕內容
+    //             results.data.forEach(function(row) {
+    //                 if (row.length === 2) {
+    //                     buttonContent[row[0].trim()] = row[1].trim();
+    //                 }
+    //             });
+    //             updateUI(containerId, buttonContent, outputContainerId);
+    //             updateUI_rightFrame(containerId, buttonContent);
+    //         }
+    //     });
+    // }
+    function loadCSV(filePath, tabIndex) {
+        Papa.parse(filePath, {
+            download: true,
+            complete: function(results) {
+                buttonContents[tabIndex] = {}; // Initialize or reset content for the tab
+                results.data.forEach(function(row) {
+                    if (row.length === 2) {
+                        buttonContents[tabIndex][row[0].trim()] = row[1].trim();
+                    }
+                });
+                updateUI(`#buttons-container${tabIndex}`, buttonContents[tabIndex], `#output-content${tabIndex}`);
+                updateUI_rightFrame(`#buttons-container${tabIndex}`, buttonContents[tabIndex]);
+            }
+        });
+    }
+
+    // function handleTabClick(tabIndex, csvPath) {
+    //     switchTab(tabIndex);
+
+    //     // 動態調用通用的 loadCSV 函數
+    //     loadCSV(csvPath, `#buttons-container${tabIndex}`, `#output-content${tabIndex}`);
+    // }
+    // function handleTabClick(tabIndex, csvPath) {
+    //     $('.tab-button').removeClass('active');
+    //     $('.tab-content').removeClass('active');
+
+    //     $(`#tab${tabIndex}`).addClass('active');
+    //     $(`#tab-content${tabIndex}`).addClass('active');
+
+    //     loadCSV(csvPath, `#buttons-container${tabIndex}`, `#output-content${tabIndex}`);
+    // }
+
+    function handleTabClick(tabIndex, csvPath) {
+        $('.tab-button').removeClass('active');
+        $('.tab-content').removeClass('active');
+
+        $(`#tab${tabIndex}`).addClass('active');
+        $(`#tab-content${tabIndex}`).addClass('active');
+
+        // Load CSV data for the tab if it hasn't been loaded yet
+        if (!buttonContents[tabIndex]) {
+            loadCSV(csvPath, tabIndex);
+        } else {
+            // Content already loaded, update UI directly
+            updateUI(`#buttons-container${tabIndex}`, buttonContents[tabIndex], `#output-content${tabIndex}`);
+        }
+    }    
+    // 使用 PapaParse 解析合盤 CSV 檔案，並更新 #buttons-container
+    // function loadCSVFromServer(filePath) {
+    //     Papa.parse(filePath, {
+    //         download: true,
+    //         complete: function(results) {
+    //             buttonContent = {}; // 清空按鈕內容
+    //             results.data.forEach(function(row) {
+    //                 if (row.length === 2) {
+    //                     buttonContent[row[0].trim()] = row[1].trim();
+    //                 }
+    //             });
+    //             updateUI('#buttons-container', buttonContent, '#output-content1'); // 更新合盤的按鈕並顯示在 output-content1
+    //             updateUI_rightFrame('#buttons-container', buttonContent);
+    //         }
+    //     });
+    // }
+
+    // // 使用 PapaParse 解析診斷 CSV 檔案，並更新 #buttons-container2
+    // function loadCSVFromServer2(filePath) {
+    //     Papa.parse(filePath, {
+    //         download: true,
+    //         complete: function(results) {
+    //             buttonContent2 = {}; // 清空按鈕內容
+    //             results.data.forEach(function(row) {
+    //                 if (row.length === 2) {
+    //                     buttonContent2[row[0].trim()] = row[1].trim();
+    //                 }
+    //             });
+    //             updateUI('#buttons-container2', buttonContent2, '#output-content2'); // 更新診斷的按鈕並顯示在 output-content2
+    //             updateUI_rightFrame('#buttons-container2', buttonContent2);
+    //         }
+    //     });
+    // }
+
+    // // 使用 PapaParse 解析教練分析 CSV 檔案，並更新 #buttons-container3
+    // function loadCSVFromServer3(filePath) {
+    //     Papa.parse(filePath, {
+    //         download: true,
+    //         complete: function(results) {
+    //             buttonContent3 = {}; // 清空按鈕內容
+    //             results.data.forEach(function(row) {
+    //                 if (row.length === 2) {
+    //                     buttonContent3[row[0].trim()] = row[1].trim();
+    //                 }
+    //             });
+    //             updateUI('#buttons-container3', buttonContent3, '#output-content3'); // 更新教練分析的按鈕並顯示在 output-content3
+    //             updateUI_rightFrame('#buttons-container3', buttonContent3);
+    //         }
+    //     });
+    // }
+
+    // // 使用 PapaParse 解析教練分析 CSV 檔案，並更新 #buttons-container3
+    // function loadCSVFromServer4(filePath) {
+    //     Papa.parse(filePath, {
+    //         download: true,
+    //         complete: function(results) {
+    //             buttonContent4 = {}; // 清空按鈕內容
+    //             results.data.forEach(function(row) {
+    //                 if (row.length === 2) {
+    //                     buttonContent4[row[0].trim()] = row[1].trim();
+    //                 }
+    //             });
+    //             updateUI('#buttons-container4', buttonContent4, '#output-content4'); // 更新教練分析的按鈕並顯示在 output-content3
+    //             updateUI_rightFrame('#buttons-container4', buttonContent4);
+    //         }
+    //     });
+    // }
+
+    // // 使用 PapaParse 解析教練分析 CSV 檔案，並更新 #buttons-container3
+    // function loadCSVFromServer5(filePath) {
+    //     Papa.parse(filePath, {
+    //         download: true,
+    //         complete: function(results) {
+    //             buttonContent5 = {}; // 清空按鈕內容
+    //             results.data.forEach(function(row) {
+    //                 if (row.length === 2) {
+    //                     buttonContent5[row[0].trim()] = row[1].trim();
+    //                 }
+    //             });
+    //             updateUI('#buttons-container5', buttonContent5, '#output-content5'); // 更新教練分析的按鈕並顯示在 output-content3
+    //             updateUI_rightFrame('#buttons-container5', buttonContent5);
+    //         }
+    //     });
+    // }
+
+    // // 使用 PapaParse 解析教練分析 CSV 檔案，並更新 #buttons-container3
+    // function loadCSVFromServer6(filePath) {
+    //     Papa.parse(filePath, {
+    //         download: true,
+    //         complete: function(results) {
+    //             buttonContent6 = {}; // 清空按鈕內容
+    //             results.data.forEach(function(row) {
+    //                 if (row.length === 2) {
+    //                     buttonContent6[row[0].trim()] = row[1].trim();
+    //                 }
+    //             });
+    //             updateUI('#buttons-container6', buttonContent6, '#output-content6'); // 更新教練分析的按鈕並顯示在 output-content3
+    //             updateUI_rightFrame('#buttons-container6', buttonContent6);
+    //         }
+    //     });
+    // }            
+
+
+
+// function updateUI(containerId, content, outputContainer) {
+//     $(containerId).empty(); // 清空該容器
+//     let counter = 1; // 計數器初始化
+
+//     $.each(content, function(buttonName, btnContent) {
+//         // 檢查 btnContent 或 outputContainer 是否等於 "內容"
+//         if (btnContent === "內容") {
+//             // 如果是 "內容"，生成 <label> 並放在新的一行
+//             $(containerId).append(`<div style="width: 100%;"><label>${buttonName}</label></div>`);
+            
+//             // 為每個 "內容" 生成新的 data-output，並計數遞增
+//             outputContainer = `#output-content${counter}`;
+//             counter++; // 計數器遞增
+//         } else {
+//             // 否則生成按鈕，並且使用動態的 outputContainer
+//             $(containerId).append(`<button class="content-btn" data-name="${buttonName}" data-output="${outputContainer}">${buttonName}</button>`);
+//         }
+//     });
+// }
+
+function updateUI(containerId, content, outputContainer, tabIndex) {
+    $(containerId).empty(); // 清空該容器
+    $('#right-frame').empty(); // 清空 right-frame 的輸出區域
+
+    let counter = 1; // 初始化計數器
+    let buttonCount = 0;
+    // 如果 containerId 是 #buttons-container，則根據 buttonName 設置對應的 counter 值
+    console.log(content)
+    if (containerId === "#buttons-container1") {
+        $.each(content, function(buttonName, btnContent) {
+            // 根據 buttonName 設置對應的 counter 值
+            if (["緣份", "陰陽天干", "流年（比劫、印P、財）", "流年（官殺）", "流年（食傷）", "流年必要"].includes(buttonName)) {
+                counter = 1;
+            } else if (buttonName === "關係") {
+                counter = 2;
+            } else if (["合盤", "十神", "天干", "結尾"].includes(buttonName)) {
+                counter = 3;
+            } else if (buttonName === "攻略") {
+                counter = 4;
+            } else if (["情絲（你）", "情絲（你們）", "情絲（他）", "情趣", "相處"].includes(buttonName)) {
+                counter = 5;
+            } else if (["快速總結（第一：緣份）", "快速總結（第二：流年）", "快速總結（第三：相處）", "桃花"].includes(buttonName)) {
+                counter = 6;
+            }
+
+            // 檢查 btnContent 是否等於 "內容"
+            if (btnContent === "內容") {
+                // 如果是 "內容"，生成 <label> 並放在新的一行
+                $(containerId).append(`<div style="width: 100%;"><label>${buttonName}</label></div>`);
+                
+                // 為每個 "內容" 生成新的 data-output
+                outputContainer = `#output-content${counter}`;
+                buttonCount = 0;
+            } else {
+                
+                // 否則生成按鈕，並且使用動態的 outputContainer
+                if (buttonCount % 3 === 0) {
+                    $(containerId).append("<div style='width: 100%';></div>");
+                    buttonCount = 0;
+                }
+                
+                // $(containerId).append(`<button class="content-btn" data-name="${buttonName}" data-output="${outputContainer}">${buttonName}</button>`);
+                $(containerId).append(`<button class="content-btn" data-name="${buttonName}" data-output="${outputContainer}" data-tab-index="${tabIndex}">${buttonName}</button>`);
+                buttonCount++;
+            }
+            
+        });
+    } else {
+        console.log(content)
+        // alert(content);
+        counter = 0;   
+        // 如果不是 #buttons-container1，則默認將 counter 設為 1
+        $.each(content, function(buttonName, btnContent) {
+                     
+            if (btnContent === "內容") {
+
+                $(containerId).append(`<div style="width: 100%;"><label>${buttonName}</label></div>`);
+                counter++;
+                outputContainer = `#output-content${counter}`;
+            } else {
+                $(containerId).append(`<button class="content-btn" data-name="${buttonName}" data-output="${outputContainer}">${buttonName}</button>`);
+            }
+        });
+    }
+}
+
+
+    // function updateUI_rightFrame(containerId) {
+    //     $('#right-frame').empty(); // 清空 right-frame 的輸出區域
+    //     let counterend = 1; // 預設為 1
+
+    //     // 如果 containerId 是 #buttons-container，則生成 6 個內容區域，否則僅生成 1 個
+    //     if (containerId === "#buttons-container") {
+    //         counterend = 6;
+    //     }
+
+    //     // 生成固定的 counterend 個 output-content 區域
+    //     for (let i = 1; i <= counterend; i++) {
+    //         // 生成對應數量的內容區域和複製按鈕
+    //         $('#right-frame').append(`
+    //             <label for="output-content${i}">內容 ${i}</label>
+    //             <div id="output-content${i}" class="output-content"></div>
+    //             <button class="copy-btn" id="copy-btn-${i}">複製內容 ${i}</button>
+    //             <button class="edit-btn1" id="edit-btn-${i}">編輯內容 ${i}</button>
+    //         `);
+
+    //         // 綁定複製按鈕的點擊事件
+    //         $(document).on('click', `#copy-btn-${i}`, function() {
+    //             copyContent(`#output-content${i}`);
+    //         });
+    //     }
+    // }
+var currentEditTarget = ''; // 當前編輯的區域
+    // 顯示編輯模態框
+    function showEditModal(target) {
+        currentEditTarget = target;
+        var currentContent = $(target).html().replace(/<br>/g, '\n'); // 將 <br> 替換為換行符
+        $('#modal-textarea').val(currentContent);
+        $('#editModal').fadeIn(); // 顯示模態框
+    }
+    // 保存編輯的內容
+    $('#save-btn').click(function() {
+        var updatedContent = $('#modal-textarea').val().replace(/\n/g, '<br>'); // 將換行符替換為 <br>
+        $(currentEditTarget).html(updatedContent); // 更新當前目標區域的內容
+        $('#editModal').fadeOut(); // 關閉模態框
+    });
+
+    // 取消編輯
+    $('#cancel-btn').click(function() {
+        $('#editModal').fadeOut(); // 關閉模態框
+    });    
+    // 動態生成按鈕和內容區域
+    function updateUI_rightFrame(containerId, content) {
+        $('#right-frame').empty(); // 清空 right-frame 的輸出區域
+        
+        // 如果 content 沒有定義，設置為空對象以防錯誤
+        content = content || {};
+
+        let counterend = 0; // 預設為 0
+
+        // 如果 containerId 是 #buttons-container，則設定固定的 counterend
+        if (containerId === "#buttons-container1") {
+            counterend = 6;
+        } else {
+
+            $.each(content, function(buttonName, btnContent) {
+                // 檢查 btnContent 是否等於 "內容"
+                // alert(counterend);
+                if (btnContent === "內容") {
+                    counterend++;
+                }
+                
+            });
+
+        }
+// alert(counterend);
+        // 動態生成內容區域和按鈕
+        for (let i = 1; i <= counterend; i++) {
+            $('#right-frame').append(`
+                <label for="output-content${i}">內容 ${i}</label>
+                <div id="output-content${i}" class="output-content"></div>
+                <button class="copy-btn" id="copy-btn-${i}">複製內容 ${i}</button>
+                <button class="edit-btn" data-output="#output-content${i}">編輯內容 ${i}</button>
+            `);
+
+            // 根據 containerId 設置剛生成的內容區域的高度
+            if (containerId === "#buttons-container1") {
+                $(`#output-content${i}`).css("height", "30%");
+            } else {
+                $(`#output-content${i}`).css("height", "30%");
+            }
+        }
+    }
+
+
+
+    // // 顯示按鈕內容，處理換行符，並顯示在對應的輸出區域
+    // $(document).on('click', '.content-btn', function() {
+    //     var buttonName = $(this).data('name');
+    //     var outputContainer = $(this).data('output');
+    //     var content = buttonContents[buttonName] || "無內容";
+    //     var formattedContent = content.replace(/\n/g, '<br>');  // 將換行符替換為 <br>
+    //     $(outputContainer).append(formattedContent + "<br><br>");
+    // });
+    // 顯示按鈕內容，處理換行符，並顯示在對應的輸出區域
+    $(document).on('click', '.content-btn', function() {
+        var buttonName = $(this).data('name');
+        var outputContainer = $(this).data('output');
+        var tabIndex = $(this).data('tab-index');  // 取得 tabIndex
+
+        // 使用 tabIndex 和 buttonName 來取得正確的內容
+        var content = buttonContents[tabIndex] ? buttonContents[tabIndex][buttonName] : "無內容";
+        var formattedContent = content.replace(/\n/g, '<br>');  // 將換行符替換為 <br>
+        $(outputContainer).append(formattedContent + "<br><br>");
+    });
+
+    // 清除顯示區內容
+    // $('#clear-btn').click(function() {
+    //     $('#output-content1, #output-content2, #output-content3').html('');  // 清除所有顯示區的內容
+    // });
+    // 清除顯示區內容
+    $('#clear-btn').click(function() {
+        let counter = 21; // 假設 counter 的值是 21，或根據實際情況設置
+
+        for (let i = 1; i <= counter; i++) {
+            $(`#output-content${i}`).html(''); // 清空每個 output-contentX 的內容
+        }
+    });
+
+
+    // 複製對應的內容
+    // function copyContent(contentId) {
+    //     var contentToCopy = $(contentId).html(); // 獲取內容 (HTML 格式)
+    //     var textToCopy = contentToCopy.replace(/<br>/g, '\n'); // 將 <br> 替換為 \n
+    //     var tempInput = $('<textarea>'); // 建立一個臨時的 textarea 元素
+    //     $('body').append(tempInput);
+    //     tempInput.val(textToCopy).select();
+    //     document.execCommand('copy'); // 複製文字到剪貼簿
+    //     tempInput.remove(); // 移除臨時的 textarea
+    //     alert('內容已複製到剪貼簿');
+    // }
+
+    // 各自對應的複製按鈕
+    // $('#copy-btn-1').click(function() {
+    //     copyContent('#output-content1');
+    // });
+    
+    // $('#copy-btn-2').click(function() {
+    //     copyContent('#output-content2');
+    // });
+    
+    // $('#copy-btn-3').click(function() {
+    //     copyContent('#output-content3');
+    // });
+
+    // 動態生成複製按鈕的點擊事件處理
+    for (let i = 1; i <= 21; i++) {
+        $(document).on('click', `#copy-btn-${i}`, function() {
+            copyContent(`#output-content${i}`);
+        });
+    }
+
+    // 複製對應的內容
+    // 複製對應的內容
+    function copyContent(contentId) {
+        var contentToCopy = $(contentId).html(); // 獲取內容 (HTML 格式)
+        var textToCopy = contentToCopy.replace(/<br>/g, '\n'); // 將 <br> 替換為 \n
+        var tempInput = $('<textarea>'); // 建立一個臨時的 textarea 元素
+        $('body').append(tempInput);
+        tempInput.val(textToCopy).select();
+        document.execCommand('copy'); // 複製文字到剪貼簿
+        tempInput.remove(); // 移除臨時的 textarea
+
+        // 顯示提示框
+        var notification = $('#copy-notification');
+        notification.addClass('show');
+
+        // 3秒後隱藏提示框
+        setTimeout(function() {
+            notification.removeClass('show');
+        }, 500);
+    }
+
+
+    // 複製所有內容
+    // $('#copyall-btn').click(function() {
+    //     var allContent = $('#output-content1').html() + "\n" + $('#output-content2').html() + "\n" + $('#output-content3').html();
+    //     var textToCopy = allContent.replace(/<br>/g, '\n'); // 將 <br> 替換為 \n
+    //     var tempInput = $('<textarea>');
+    //     $('body').append(tempInput);
+    //     tempInput.val(textToCopy).select();
+    //     document.execCommand('copy');
+    //     tempInput.remove();
+    //     alert('所有內容已複製到剪貼簿');
+    // });
+
+
+    // 複製所有內容
+    $('#copyall-btn').click(function() {
+        let counter = 6; // 假設 counter 的值是 21 或根據實際情況設置
+
+        let allContent = '';
+        
+        for (let i = 1; i <= counter; i++) {
+            allContent += $(`#output-content${i}`).html() + "\n"; // 從每個 output-contentX 收集內容
+        }
+
+        var textToCopy = allContent.replace(/<br>/g, '\n'); // 將 <br> 替換為 \n
+        var tempInput = $('<textarea>'); // 建立一個臨時的 textarea
+        $('body').append(tempInput);
+        tempInput.val(textToCopy).select();
+        document.execCommand('copy'); // 複製文字到剪貼簿
+        tempInput.remove(); // 移除臨時的 textarea
+        alert('所有內容已複製到剪貼簿');
+    });
+
+
+    // 傳送輸入框內容到合盤內容
+    $('#send-btn').click(function() {
+        var inputValue = $('#input-content').val();
+        if (inputValue.trim()) {
+            $('#output-content1').append(inputValue + "<br><br>");
+            // $('#input-content').val('');  // 清除輸入框
+        }
+    });
+    // 綁定編輯按鈕的事件處理（使用事件代理）
+    $(document).on('click', '.edit-btn', function() {
+        var outputId = $(this).data('output'); // 獲取對應的 output-content ID
+        showEditModal(outputId);
+    });
+// // 打開模態框
+// $('#edit-btn1').click(function() {
+//     var currentContent = $('#output-content1').html().replace(/<br>/g, '\n'); // 將 <br> 替換為換行符
+//     $('#modal-textarea').val(currentContent);
+//     $('#editModal').fadeIn(); // 顯示模態框
+// });
+
+// 保存編輯的內容
+$('#save-btn1').click(function() {
+    var updatedContent = $('#modal-textarea').val().replace(/\n/g, '<br>'); // 將換行符替換為 <br>
+    $('#output-content1').html(updatedContent); // 更新 output-content1 的內容
+    $('#editModal').fadeOut(); // 關閉模態框
+});
+
+// 取消編輯
+$('#cancel-btn').click(function() {
+    $('#editModal').fadeOut(); // 關閉模態框
+});
+
+    // 頁籤切換功能
+    function switchTab(tabIndex) {
+        $('.tab-button').removeClass('active');
+        $('.tab-content').removeClass('active');
+
+        $('#tab' + tabIndex).addClass('active');
+        $('#tab-content' + tabIndex).addClass('active');
+    }
+
+    // 頁籤按鈕點擊事件
+    // $('#tab1').click(function() {
+    //     switchTab(1);
+    //     loadCSVFromServer('./合盤.csv', '#buttons-container', buttonContent, '#output-content1');
+    // });
+
+    // $('#tab2').click(function() {
+    //     switchTab(2);
+    //     loadCSVFromServer2('./診斷.csv', '#buttons-container2', buttonContent2, '#output-content2');
+    // });
+
+    // $('#tab3').click(function() {
+    //     switchTab(3);
+    //     loadCSVFromServer3('./教練分析.csv', '#buttons-container3', buttonContent3, '#output-content3');
+    // });
+    // $('#tab4').click(function() {
+    //     switchTab(4);
+    //     loadCSVFromServer4('./1.csv', '#buttons-container4', buttonContent4, '#output-content4');
+    // });
+    // $('#tab5').click(function() {
+    //     switchTab(5);
+    //     loadCSVFromServer5('./2.csv', '#buttons-container5', buttonContent5, '#output-content5');
+    // });
+    // $('#tab6').click(function() {
+    //     switchTab(6);
+    //     loadCSVFromServer6('./3.csv', '#buttons-container6', buttonContent6, '#output-content6');
+    // });            
+    // 頁面載入時從伺服器載入 CSV 檔案
+    $(document).ready(function() {
+        loadTabsFromCSV('tabs.csv'); // 載入 tabs.csv 以動態生成頁籤  
+    });
+
+</script>
+
+</body>
+</html>
